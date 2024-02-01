@@ -1,0 +1,26 @@
+@page "{id}"
+@model Poller.Pages.Poll.Edit
+
+@{
+    ViewData["Title"] = "Edit Poll";
+}
+
+Edit @Model.Poll.Title
+
+<h3>Options</h3>
+<ul>
+@foreach (var option in Model.Poll.Options)
+{
+    <li>@option.Text<form asp-page-handler="DelOption" method="post"><button type="submit" class="btn btn-primary">Delete</button><input type="hidden" name="optionId" value="@option.Id" /></form></li>
+}
+</ul>
+
+<h3>Add Option</h3>
+<form asp-page-handler="AddOption" method="post">
+    <div class="mb-3">
+        <label for="newOptionText" class="form-label">Text</label>
+        <input type="text" class="form-control" id="newOptionText" asp-for="NewOptionText" aria-describedby="newOptionTextHelp" />
+        <div id="newOptionTextHelp" class="form-text">Text of the new Option.</div>
+      </div>
+      <button type="submit" class="btn btn-primary">Add</button>
+</form>

@@ -1,0 +1,15 @@
+@page
+@model Poller.Pages.Poll.Create
+
+@{
+    ViewData["Title"] = "New Poll";
+}
+
+<form method="post">
+  <div class="mb-3">
+    <label for="title" class="form-label">Title</label>
+    <input type="text" class="form-control" id="title" asp-for="Title" aria-describedby="titleHelp">
+    <div id="titleHelp" class="form-text">The Title of the new Poll.</div>
+  </div>
+  <button type="submit" class="btn btn-primary">Submit</button>
+</form>

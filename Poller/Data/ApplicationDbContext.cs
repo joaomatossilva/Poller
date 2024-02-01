@@ -9,5 +9,9 @@ namespace Poller.Data
             : base(options)
         {
         }
+
+        public DbSet<Poll> Polls { get; set; }
+        public DbSet<PollOption> PollOptions { get; set; }
+        public DbSet<PollOptionVote> PollOptionVotes { get; set; }
     }
 }
