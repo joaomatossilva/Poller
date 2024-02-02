@@ -11,7 +11,7 @@ My polls
     @foreach (var poll in Model.MyPolls)
     {
         <li>
-            @poll.Title <a href="@Url.Page("Vote", new {poll.Id})">Go</a> <a href="@Url.Page("Edit", new {poll.Id})">Edit</a>
+            @poll.Title <a href="@Url.Page("Details", new {poll.Id})">Go</a> <a href="@Url.Page("Edit", new {poll.Id})">Edit</a>
         </li>
     }
 </ul>

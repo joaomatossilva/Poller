@@ -1,0 +1,23 @@
+@page "{id}"
+@model Poller.Pages.Poll.Details
+
+@{
+    ViewData["Title"] = "Vote Poll";
+}
+
+<h1>@Model.Poll.Title</h1>
+
+<h3>Options</h3>
+
+<ul>
+    @foreach (var option in Model.Poll.Options)
+    {
+        <li>
+            @option.Text (@option.Votes.Count)
+            @if (!Model.hasVoted)
+            {
+                <form method="post" asp-page-handler="VoteOption"><input type="hidden" name="optionId" value="@option.Id"/><input type="submit" value="Vote"/></form>
+            }
+        </li>
+    }
+</ul>
