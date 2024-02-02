@@ -11,7 +11,7 @@ Edit @Model.Poll.Title
 <ul>
 @foreach (var option in Model.Poll.Options)
 {
-    <li>@option.Text<form asp-page-handler="DelOption" method="post"><button type="submit" class="btn btn-primary">Delete</button><input type="hidden" name="optionId" value="@option.Id" /></form></li>
+    <li>@option.Text<form asp-page-handler="DeleteOption" method="post"><button type="submit" class="btn btn-primary">Delete</button><input type="hidden" name="optionId" value="@option.Id" /></form></li>
 }
 </ul>
 

@@ -2,10 +2,20 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Poller.Pages.Poll;
 
-public class Index : PageModel
+using Data;
+using Extensions;
+using Microsoft.EntityFrameworkCore;
+
+public class Index(ApplicationDbContext dbContext) : PageModel
 {
-    public void OnGet()
+    public IEnumerable<Poll> MyPolls { get; set; }
+
+    public async Task OnGet()
     {
-        
+        var userId = User.GetUserId();
+        MyPolls = await dbContext.Polls
+            .Where(x => x.UserId == userId)
+            .OrderByDescending(x => x.CreatedUtc)
+            .ToListAsync();
     }
 }
