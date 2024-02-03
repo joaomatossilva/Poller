@@ -27,6 +27,8 @@ builder.Services.AddSingleton(_ => new SqidsEncoder<int>(new SqidsOptions
     MinLength = 6
 }));
 
+builder.Services.AddMediatR(x => x.RegisterServicesFromAssemblyContaining<Program>());
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
