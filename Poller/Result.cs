@@ -26,6 +26,12 @@ public readonly struct Result<T>
     public TOut Match<TOut>(Func<T, TOut> success, Func<Exception, TOut> error) =>
         IsSuccess ? success(Value) : error(Exception);
 
+    public async Task<TOut> MatchAsync<TOut>(Func<T, Task<TOut>> success, Func<Exception, Task<TOut>> error) =>
+        IsSuccess ? await success(Value) : await error(Exception);
+
     public Result<TOut> Map<TOut>(Func<T, Result<TOut>> action) =>
         IsSuccess ? action(Value) : Result<TOut>.Error(Exception);
+
+    public async Task<Result<TOut>> MapAsync<TOut>(Func<T, CancellationToken, Task<Result<TOut>>> action, CancellationToken ct) =>
+        IsSuccess ? await action(Value, ct) : Result<TOut>.Error(Exception);
 }

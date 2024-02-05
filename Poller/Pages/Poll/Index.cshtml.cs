@@ -12,11 +12,9 @@ public class Index(IMediator mediator) : PageModel
 {
     public IEnumerable<Poll> MyPolls { get; set; }
 
-    public async Task<IActionResult> OnGet()
-    {
-        return await mediator.Send(new Query { UserId = User.GetUserId() })
+    public async Task<IActionResult> OnGet() =>
+        await mediator.Send(new Query { UserId = User.GetUserId() })
             .MatchPageResult(x => MyPolls, this);
-    }
 
     public class Query : IRequest<Result<IEnumerable<Poll>>>
     {
