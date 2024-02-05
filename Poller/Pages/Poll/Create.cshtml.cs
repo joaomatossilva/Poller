@@ -4,38 +4,55 @@ namespace Poller.Pages.Poll;
 
 using Data;
 using Extensions;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sqids;
 
 [Authorize]
-public class Create(ApplicationDbContext dbContext, SqidsEncoder<int> sqidsEncoder) : PageModel
+public class Create(IMediator mediator) : PageModel
 {
     [BindProperty]
     public string Title { get; set; }
 
     public void OnGet()
     {
-
     }
 
-    public async Task<IActionResult> OnPost()
+    public async Task<IActionResult> OnPost() =>
+        await mediator.Send(new Command { Title = Title, UserId = User.GetUserId() })
+            .MatchRedirectToPage(nameof(Edit));
+
+    public class RouteValues
     {
-        var userId = User.GetUserId();
-        var id = Guid.NewGuid();
-        var poll = new Poll
+        public Guid Id { get; set; }
+    }
+
+    public class Command : IRequest<Result<RouteValues>>
+    {
+        public string UserId { get; init; }
+        public string Title { get; init; }
+    }
+
+    public class CommandHandler(ApplicationDbContext dbContext, SqidsEncoder<int> sqidsEncoder) : IRequestHandler<Command, Result<RouteValues>>
+    {
+        public async Task<Result<RouteValues>> Handle(Command request, CancellationToken cancellationToken)
         {
-            Id = id,
-            //This is collision prone but since this is only academic, it's ok
-            Code = sqidsEncoder.Encode(Math.Abs(id.GetHashCode())),
-            CreatedUtc = DateTime.UtcNow,
-            Title = Title,
-            UserId = userId
-        };
+            var id = Guid.NewGuid();
+            var poll = new Poll
+            {
+                Id = id,
+                //This is collision prone but since this is only academic, it's ok
+                Code = sqidsEncoder.Encode(Math.Abs(id.GetHashCode())),
+                CreatedUtc = DateTime.UtcNow,
+                Title = request.Title,
+                UserId = request.UserId
+            };
 
-        dbContext.Polls.Add(poll);
-        await dbContext.SaveChangesAsync();
+            dbContext.Polls.Add(poll);
+            await dbContext.SaveChangesAsync(cancellationToken);
 
-        return RedirectToPage("Edit", new { Id = poll.Id });
+            return Result<RouteValues>.Success(new RouteValues { Id = poll.Id});
+        }
     }
 }

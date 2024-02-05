@@ -27,6 +27,10 @@ public static class ResultsExtensions
         (await resultTask)
         .MatchPage(item => { instance.AssignValue(item, success); });
 
+    public static async Task<IActionResult> MatchRedirectToPage<T>(this Task<Result<T>> resultTask, string page) =>
+        (await resultTask)
+        .Match(item => new RedirectToPageResult(page, item), exception => exception.HandleIt());
+
     private static void AssignValue<T, TIn>(this TIn instance, T value, Expression<Func<TIn, T>> expression)
     {
         var propertyInfo = (PropertyInfo)((MemberExpression)expression.Body).Member;
