@@ -5,16 +5,16 @@
     ViewData["Title"] = "Vote Poll";
 }
 
-<h1>@Model.Poll.Title</h1>
+<h1>@Model.PollDetails.Poll.Title</h1>
 
 <h3>Options</h3>
 
 <ul>
-    @foreach (var option in Model.Poll.Options)
+    @foreach (var option in Model.PollDetails.Poll.Options)
     {
         <li>
             @option.Text (@option.Votes.Count)
-            @if (!Model.hasVoted)
+            @if (!Model.PollDetails.HaveVoted)
             {
                 <form method="post" asp-page-handler="VoteOption"><input type="hidden" name="optionId" value="@option.Id"/><input type="submit" value="Vote"/></form>
             }

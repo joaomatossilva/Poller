@@ -4,73 +4,90 @@ namespace Poller.Pages.Poll;
 
 using Data;
 using Extensions;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
-public class Details(ApplicationDbContext dbContext) : PageModel
+public class Details(IMediator mediator) : PageModel
 {
-    public Poll Poll { get; set; }
-    public bool hasVoted { get; set; }
+    public PollDetailsViewModel PollDetails { get; set; }
 
-    public async Task<IActionResult> OnGet(Guid id)
+    public async Task<IActionResult> OnGet(Guid id) =>
+        await mediator.Send(new Query { Id = id, UserId = User.GetUserId() })
+            .MatchPageResult(x => PollDetails, this);
+
+    public async Task<IActionResult> OnPostVoteOption(Guid id, Guid optionId) =>
+        await mediator.Send(new Command { Id = id, OptionId = optionId, UserId = User.GetUserId() })
+            .MatchRedirectToPage(nameof(Details));
+
+    public class PollDetailsViewModel
     {
-        //Good candidate for projection
-        var poll = await dbContext.Polls
-            .Include(x => x.Options)
-            .ThenInclude(x => x.Votes)
-            //.ThenInclude(x => x.)
-            .AsSplitQuery()
-            .Where(x => x.Id == id)
-            .FirstOrDefaultAsync();
-
-        if (poll is null)
-        {
-            return NotFound();
-        }
-
-        //Check if user can vote/view
-
-        var userId = User.GetUserId();
-        Poll = poll;
-        hasVoted = poll.Options.Any(x => x.Votes.Any(x => x.UserId == userId));
-        return Page();
+        public Poll Poll { get; init; }
+        public bool HaveVoted { get; init; }
     }
 
-    public async Task<IActionResult> OnPostVoteOption(Guid id, Guid optionId)
+    public class Query : IRequest<Result<PollDetailsViewModel>>
     {
-        var poll = await dbContext.Polls
-            .Include(x => x.Options)
-            .ThenInclude(x => x.Votes)
-            //.ThenInclude(x => x.)
-            .AsSplitQuery()
-            .Where(x => x.Id == id)
-            .FirstOrDefaultAsync();
+        public string UserId { get; init; }
+        public Guid Id { get; init; }
+    }
 
-        if (poll is null)
-        {
-            return NotFound();
-        }
+    public class RouteValues
+    {
+        public Guid Id { get; init; }
+    }
 
-        var option = poll.Options
-            .FirstOrDefault(x => x.Id == optionId);
+    public class Command : IRequest<Result<RouteValues>>
+    {
+        public Guid Id { get; init; }
+        public Guid OptionId { get; init; }
+        public string UserId { get; init; }
+    }
 
-        if (option is null)
-        {
-            return NotFound();
-        }
+    public class QueryHandler(ApplicationDbContext dbContext) : IRequestHandler<Query, Result<PollDetailsViewModel>>
+    {
+        public async Task<Result<PollDetailsViewModel>> Handle(Query request, CancellationToken cancellationToken) =>
+            //Good candidate for projection
+            await dbContext.Polls
+                .Include(x => x.Options)
+                .ThenInclude(x => x.Votes)
+                //.ThenInclude(x => x.)
+                .AsSplitQuery()
+                .Where(x => x.Id == request.Id)
+                .FirstOrFailResultAsync(cancellationToken)
+                .MapAsync((poll, _) =>
+                {
+                    //Check if user can vote/view
+                    var userId = request.UserId;
+                    var haveVoted = poll.Options.Any(x => x.Votes.Any(x => x.UserId == userId));
+                    return Task.FromResult(Result<PollDetailsViewModel>.Success(new PollDetailsViewModel
+                    {
+                        HaveVoted = haveVoted,
+                        Poll = poll
+                    }));
+                }, cancellationToken);
+    }
 
-        var userId = User.GetUserId();
-        var optionVote = new PollOptionVote
-        {
-            Id = Guid.NewGuid(),
-            PollOptionId = option.Id,
-            UserId = userId,
-            VoteDateUtc = DateTime.UtcNow
-        };
+    public class CommandHandler(ApplicationDbContext dbContext) : IRequestHandler<Command, Result<RouteValues>>
+    {
+        public async Task<Result<RouteValues>> Handle(Command request, CancellationToken cancellationToken) =>
+            await dbContext.PollOptions
+                .Where(x => x.Poll.Id == request.Id && x.Id == request.OptionId)
+                .FirstOrFailResultAsync(cancellationToken)
+                .MapAsync((option, _) =>
+                {
+                    var optionVote = new PollOptionVote
+                    {
+                        Id = Guid.NewGuid(),
+                        PollOptionId = option.Id,
+                        UserId = request.UserId,
+                        VoteDateUtc = DateTime.UtcNow
+                    };
 
-        dbContext.PollOptionVotes.Add(optionVote);
-        await dbContext.SaveChangesAsync();
+                    dbContext.PollOptionVotes.Add(optionVote);
+                    return Task.FromResult(Result<RouteValues>.Success(new RouteValues { Id = request.Id }));
+                }, cancellationToken)
+                .MapSaveChangesResultAsync(dbContext, cancellationToken);
 
-        return RedirectToPage(new { id });
     }
 }
