@@ -61,7 +61,7 @@ public class Edit(IMediator mediator) : PageModel
             await dbContext.Polls
                 .Include(p => p.Options)
                 .FirstOrFailResultAsync(x => x.Id == request.Id && x.UserId == request.UserId, cancellationToken)
-                .MapAsync(async (poll, ct) =>
+                .MapAsync((poll, _) =>
                 {
                     var newOption = new PollOption
                     {
@@ -71,10 +71,9 @@ public class Edit(IMediator mediator) : PageModel
                     };
                     poll.Options.Add(newOption);
                     dbContext.PollOptions.Add(newOption);
-
-                    await dbContext.SaveChangesAsync(ct);
-                    return Result<Poll>.Success(poll);
-                }, cancellationToken);
+                    return Task.FromResult(Result<Poll>.Success(poll));
+                }, cancellationToken)
+                .MapSaveChangesResultAsync(dbContext, cancellationToken);
     }
 
     public class DeleteOptionCommandHandler(ApplicationDbContext dbContext) : IRequestHandler<DeleteOptionCommand, Result<Poll>>
@@ -84,13 +83,12 @@ public class Edit(IMediator mediator) : PageModel
                 .Include(p => p.Options)
                 .FirstOrFailResultAsync(x => x.Id == request.Id && x.UserId == request.UserId, cancellationToken)
                 .MapAsync(async (poll, ct) => await dbContext.PollOptions.FirstOrFailResultAsync(x => x.Id == request.OptionId, ct)
-                    .MapAsync(async (opt, ct2) =>
+                    .MapAsync((opt, _) =>
                     {
                         poll.Options.Remove(opt);
                         dbContext.PollOptions.Remove(opt);
-                        await dbContext.SaveChangesAsync(ct2);
-
-                        return Result<Poll>.Success(poll);
-                    }, ct), cancellationToken);
+                        return Task.FromResult(Result<Poll>.Success(poll));
+                    }, ct), cancellationToken)
+                .MapSaveChangesResultAsync(dbContext, cancellationToken);
     }
 }

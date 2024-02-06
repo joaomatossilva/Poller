@@ -6,30 +6,26 @@ using Data;
 using Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 public class Index(IMediator mediator) : PageModel
 {
-    public IEnumerable<Poll> MyPolls { get; set; }
+    public List<Poll> MyPolls { get; set; }
 
     public async Task<IActionResult> OnGet() =>
         await mediator.Send(new Query { UserId = User.GetUserId() })
             .MatchPageResult(x => MyPolls, this);
 
-    public class Query : IRequest<Result<IEnumerable<Poll>>>
+    public class Query : IRequest<Result<List<Poll>>>
     {
         public string UserId { get; init; }
     }
 
-    public class QueryHandler(ApplicationDbContext dbContext) : IRequestHandler<Query, Result<IEnumerable<Poll>>>
+    public class QueryHandler(ApplicationDbContext dbContext) : IRequestHandler<Query, Result<List<Poll>>>
     {
-        public async Task<Result<IEnumerable<Poll>>> Handle(Query request, CancellationToken cancellationToken)
-        {
-            var polls = await dbContext.Polls
+        public async Task<Result<List<Poll>>> Handle(Query request, CancellationToken cancellationToken) =>
+            await dbContext.Polls
                 .Where(x => x.UserId == request.UserId)
                 .OrderByDescending(x => x.CreatedUtc)
-                .ToListAsync(cancellationToken);
-            return Result<IEnumerable<Poll>>.Success(polls);
-        }
+                .ToListResultAsync(cancellationToken);
     }
 }

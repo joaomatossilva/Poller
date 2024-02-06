@@ -36,23 +36,27 @@ public class Create(IMediator mediator) : PageModel
 
     public class CommandHandler(ApplicationDbContext dbContext, SqidsEncoder<int> sqidsEncoder) : IRequestHandler<Command, Result<RouteValues>>
     {
-        public async Task<Result<RouteValues>> Handle(Command request, CancellationToken cancellationToken)
-        {
-            var id = Guid.NewGuid();
-            var poll = new Poll
-            {
-                Id = id,
-                //This is collision prone but since this is only academic, it's ok
-                Code = sqidsEncoder.Encode(Math.Abs(id.GetHashCode())),
-                CreatedUtc = DateTime.UtcNow,
-                Title = request.Title,
-                UserId = request.UserId
-            };
+        public async Task<Result<RouteValues>> Handle(Command request, CancellationToken cancellationToken) =>
+            await Task.FromResult(Result<Unit>.Success(Unit.Value))
+                .MapAsync((_, _) =>
+                {
+                    var id = Guid.NewGuid();
+                    var poll = new Poll
+                    {
+                        Id = id,
+                        //This is collision prone but since this is only academic, it's ok
+                        Code = sqidsEncoder.Encode(Math.Abs(id.GetHashCode())),
+                        CreatedUtc = DateTime.UtcNow,
+                        Title = request.Title,
+                        UserId = request.UserId
+                    };
 
-            dbContext.Polls.Add(poll);
-            await dbContext.SaveChangesAsync(cancellationToken);
+                    dbContext.Polls.Add(poll);
+                    return Task.FromResult(Result<Poll>.Success(poll));
 
-            return Result<RouteValues>.Success(new RouteValues { Id = poll.Id});
-        }
+                }, cancellationToken)
+                .MapSaveChangesResultAsync(dbContext, cancellationToken)
+                .MapAsync<RouteValues, Poll>((poll, _) => Task.FromResult(Result<RouteValues>.Success(new RouteValues { Id = poll.Id})), cancellationToken);
+
     }
 }
