@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Poller.Pages.Poll;
 
+using Ardalis.Specification;
+using Ardalis.Specification.EntityFrameworkCore;
 using Data;
 using Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 [Authorize]
 public class Edit(IMediator mediator) : PageModel
@@ -53,16 +54,16 @@ public class Edit(IMediator mediator) : PageModel
     {
         public async Task<Result<Poll>> Handle(Query request, CancellationToken cancellationToken) =>
             await dbContext.Polls
-                .Include(p => p.Options)
-                .FirstOrFailResultAsync(x => x.Id == request.Id && x.UserId == request.UserId, cancellationToken);
+                .WithSpecification(new PollSpecification(request.Id, request.UserId))
+                .FirstOrFailResultAsync(cancellationToken);
     }
 
     public class AddOptionCommandHandler(ApplicationDbContext dbContext) : IRequestHandler<AddOptionCommand, Result<Poll>>
     {
         public async Task<Result<Poll>> Handle(AddOptionCommand request, CancellationToken cancellationToken) =>
             await dbContext.Polls
-                .Include(p => p.Options)
-                .FirstOrFailResultAsync(x => x.Id == request.Id && x.UserId == request.UserId, cancellationToken)
+                .WithSpecification(new PollSpecification(request.Id, request.UserId))
+                .FirstOrFailResultAsync(cancellationToken)
                 .MapAsync((poll, _) =>
                 {
                     var newOption = new PollOption
@@ -82,8 +83,8 @@ public class Edit(IMediator mediator) : PageModel
     {
         public async Task<Result<Poll>> Handle(DeleteOptionCommand request, CancellationToken cancellationToken) =>
             await dbContext.Polls
-                .Include(p => p.Options)
-                .FirstOrFailResultAsync(x => x.Id == request.Id && x.UserId == request.UserId, cancellationToken)
+                .WithSpecification(new PollSpecification(request.Id, request.UserId))
+                .FirstOrFailResultAsync(cancellationToken)
                 .MapAsync(async (poll, ct) => await dbContext.PollOptions.FirstOrFailResultAsync(x => x.Id == request.OptionId, ct)
                     .MapAsync((opt, _) =>
                     {
@@ -92,5 +93,15 @@ public class Edit(IMediator mediator) : PageModel
                         return Task.FromResult(Result<Poll>.Success(poll));
                     }, ct), cancellationToken)
                 .MapSaveChangesResultAsync(dbContext, cancellationToken);
+    }
+
+    public class PollSpecification : Specification<Poll>
+    {
+        public PollSpecification(Guid id, string userId)
+        {
+            Query
+                .Include(p => p.Options)
+                .Where(x => x.Id == id && x.UserId == userId);
+        }
     }
 }

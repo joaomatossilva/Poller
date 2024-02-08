@@ -2,12 +2,13 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Poller.Pages.Poll;
 
+using Ardalis.Specification;
+using Ardalis.Specification.EntityFrameworkCore;
 using Data;
 using Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 [Authorize]
 public class Details(IMediator mediator) : PageModel
@@ -51,11 +52,7 @@ public class Details(IMediator mediator) : PageModel
         public async Task<Result<PollDetailsViewModel>> Handle(Query request, CancellationToken cancellationToken) =>
             //Good candidate for projection
             await dbContext.Polls
-                .Include(x => x.Options)
-                .ThenInclude(x => x.Votes)
-                //.ThenInclude(x => x.)
-                .AsSplitQuery()
-                .Where(x => x.Id == request.Id)
+                .WithSpecification(new PollSpecification(request.Id))
                 .FirstOrFailResultAsync(cancellationToken)
                 .MapAsync((poll, _) =>
                 {
@@ -74,7 +71,7 @@ public class Details(IMediator mediator) : PageModel
     {
         public async Task<Result<RouteValues>> Handle(Command request, CancellationToken cancellationToken) =>
             await dbContext.PollOptions
-                .Where(x => x.Poll.Id == request.Id && x.Id == request.OptionId)
+                .WithSpecification(new PollOptionSpecification(request.Id, request.OptionId))
                 .FirstOrFailResultAsync(cancellationToken)
                 .MapAsync((option, _) =>
                 {
@@ -90,6 +87,26 @@ public class Details(IMediator mediator) : PageModel
                     return Task.FromResult(Result<RouteValues>.Success(new RouteValues { Id = request.Id }));
                 }, cancellationToken)
                 .MapSaveChangesResultAsync(dbContext, cancellationToken);
+    }
 
+    public class PollSpecification : Specification<Poll>
+    {
+        public PollSpecification(Guid id)
+        {
+            Query
+                .Include(x => x.Options)
+                .ThenInclude(x => x.Votes)
+                .AsSplitQuery()
+                .Where(x => x.Id == id);
+        }
+    }
+
+    public class PollOptionSpecification : Specification<PollOption>
+    {
+        public PollOptionSpecification(Guid pollId, Guid optionId)
+        {
+            Query
+                .Where(x => x.Poll.Id == pollId && x.Id == optionId);
+        }
     }
 }

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Poller.Pages.Poll;
 
+using Ardalis.Specification;
+using Ardalis.Specification.EntityFrameworkCore;
 using Data;
 using Extensions;
 using MediatR;
@@ -26,8 +28,17 @@ public class Index(IMediator mediator) : PageModel
     {
         public async Task<Result<List<Poll>>> Handle(Query request, CancellationToken cancellationToken) =>
             await dbContext.Polls
-                .Where(x => x.UserId == request.UserId)
-                .OrderByDescending(x => x.CreatedUtc)
+                .WithSpecification(new MyPollsSpecification(request.UserId))
                 .ToListResultAsync(cancellationToken);
+    }
+
+    public class MyPollsSpecification : Specification<Poll>
+    {
+        public MyPollsSpecification(string userId)
+        {
+            Query
+                .Where(x => x.UserId == userId)
+                .OrderByDescending(x => x.CreatedUtc);
+        }
     }
 }
