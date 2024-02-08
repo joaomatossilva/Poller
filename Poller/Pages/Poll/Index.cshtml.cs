@@ -5,8 +5,10 @@ namespace Poller.Pages.Poll;
 using Data;
 using Extensions;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+[Authorize]
 public class Index(IMediator mediator) : PageModel
 {
     public List<Poll> MyPolls { get; set; }

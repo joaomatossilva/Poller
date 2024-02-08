@@ -3,18 +3,18 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace Poller.Pages
 {
-    public class IndexModel : PageModel
+    public class IndexModel(ILogger<IndexModel> logger) : PageModel
     {
-        private readonly ILogger<IndexModel> _logger;
+        private readonly ILogger<IndexModel> _logger = logger;
 
-        public IndexModel(ILogger<IndexModel> logger)
+        public IActionResult OnGet()
         {
-            _logger = logger;
-        }
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                return RedirectToPage("./Poll/Index");
+            }
 
-        public void OnGet()
-        {
-
+            return Page();
         }
     }
 }

@@ -5,9 +5,11 @@ namespace Poller.Pages.Poll;
 using Data;
 using Extensions;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
+[Authorize]
 public class Edit(IMediator mediator) : PageModel
 {
     public Poll Poll { get; set; }
